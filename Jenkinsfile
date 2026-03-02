@@ -10,13 +10,68 @@ pipeline {
         ECR_CHAT = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/streamingapp-chat"
     }
     stages {
+        stage('AWS Login & Docker Auth') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+                    sh '''
+                    aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.us-west-1.amazonaws.com
+                    echo "✅ Docker login successful"
+                    '''
+                }
+            }
+        }
         stage('Build Images') {
             parallel {
-                stage('Frontend') { steps { sh 'docker build -t frontend ./frontend' } }
-                stage('Auth') { steps { sh 'docker build -t auth ./backend/authService' } }
-                stage('Streaming') { steps { sh 'docker build -t streaming ./backend/streamingService' } }
-                stage('Admin') { steps { sh 'docker build -t admin ./backend/adminService' } }
-                stage('Chat') { steps { sh 'docker build -t chat ./backend/chatService' } }
+                stage('Frontend') { 
+                    steps { 
+                        dir('frontend') {
+                            sh '''
+                            docker build -t ${ECR_FRONTEND}:${BUILD_NUMBER} .
+                            docker push ${ECR_FRONTEND}:${BUILD_NUMBER}
+                            '''
+                        }
+                    } 
+                }
+                stage('Auth') { 
+                    steps { 
+                        dir('backend/authService') {
+                            sh '''
+                            docker build -t ${ECR_AUTH}:${BUILD_NUMBER} .
+                            docker push ${ECR_AUTH}:${BUILD_NUMBER}
+                            '''
+                        }
+                    } 
+                }
+                stage('Streaming') { 
+                    steps { 
+                        dir('backend/streamingService') {
+                            sh '''
+                            docker build -t ${ECR_STREAMING}:${BUILD_NUMBER} .
+                            docker push ${ECR_STREAMING}:${BUILD_NUMBER}
+                            '''
+                        }
+                    } 
+                }
+                stage('Admin') { 
+                    steps { 
+                        dir('backend/adminService') {
+                            sh '''
+                            docker build -t ${ECR_ADMIN}:${BUILD_NUMBER} .
+                            docker push ${ECR_ADMIN}:${BUILD_NUMBER}
+                            '''
+                        }
+                    } 
+                }
+                stage('Chat') { 
+                    steps { 
+                        dir('backend/chatService') {
+                            sh '''
+                            docker build -t ${ECR_CHAT}:${BUILD_NUMBER} .
+                            docker push ${ECR_CHAT}:${BUILD_NUMBER}
+                            '''
+                        }
+                    } 
+                }
             }
         }
     }
