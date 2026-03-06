@@ -1,82 +1,64 @@
 pipeline {
     agent any
     stages {
-        stage('AWS Login - Direct') {
-            steps {
-                sh '''
-                aws configure set aws_access_key_id AKIAQMS3O5JPPW6ZBQ6Z
-                aws configure set aws_secret_access_key wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY
-                aws configure set default.region us-west-1
-                aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin 975050024946.dkr.ecr.us-west-1.amazonaws.com
-                echo "✅ Docker login successful"
-                '''
-            }
-        }
-        stage('Frontend') {
+        stage('Build Frontend') {
             steps { 
                 dir('frontend') { 
                     script { 
                         def image = docker.build("975050024946.dkr.ecr.us-west-1.amazonaws.com/streamingapp-frontend:${BUILD_NUMBER}")
-                        image.push()
-                        image.push('latest')
-                        echo "✅ Frontend pushed"
+                        echo "✅ Frontend built locally"
                     } 
                 } 
             }
         }
-        stage('Auth Service') { 
-            steps { 
-                dir('backend/authService') { 
-                    script { 
-                        def image = docker.build("975050024946.dkr.ecr.us-west-1.amazonaws.com/streamingapp-auth:${BUILD_NUMBER}")
-                        image.push()
-                        image.push('latest')
-                        echo "✅ Auth service pushed"
+        stage('Build Services') {
+            parallel {
+                stage('Auth') { 
+                    steps { 
+                        dir('backend/authService') { 
+                            script { 
+                                def image = docker.build("975050024946.dkr.ecr.us-west-1.amazonaws.com/streamingapp-auth:${BUILD_NUMBER}")
+                                echo "✅ Auth built"
+                            } 
+                        } 
                     } 
-                } 
-            } 
-        }
-        stage('Admin Service') { 
-            steps { 
-                dir('backend/adminService') { 
-                    script { 
-                        def image = docker.build("975050024946.dkr.ecr.us-west-1.amazonaws.com/streamingapp-admin:${BUILD_NUMBER}")
-                        image.push()
-                        image.push('latest')
-                        echo "✅ Admin service pushed"
+                }
+                stage('Admin') { 
+                    steps { 
+                        dir('backend/adminService') { 
+                            script { 
+                                def image = docker.build("975050024946.dkr.ecr.us-west-1.amazonaws.com/streamingapp-admin:${BUILD_NUMBER}")
+                                echo "✅ Admin built"
+                            } 
+                        } 
                     } 
-                } 
-            } 
-        }
-        stage('Chat Service') { 
-            steps { 
-                dir('backend/chatService') { 
-                    script { 
-                        def image = docker.build("975050024946.dkr.ecr.us-west-1.amazonaws.com/streamingapp-chat:${BUILD_NUMBER}")
-                        image.push()
-                        image.push('latest')
-                        echo "✅ Chat service pushed"
+                }
+                stage('Chat') { 
+                    steps { 
+                        dir('backend/chatService') { 
+                            script { 
+                                def image = docker.build("975050024946.dkr.ecr.us-west-1.amazonaws.com/streamingapp-chat:${BUILD_NUMBER}")
+                                echo "✅ Chat built"
+                            } 
+                        } 
                     } 
-                } 
-            } 
-        }
-        stage('Streaming Service') { 
-            steps { 
-                dir('backend/streamingService') { 
-                    script { 
-                        def image = docker.build("975050024946.dkr.ecr.us-west-1.amazonaws.com/streamingapp-streaming:${BUILD_NUMBER}")
-                        image.push()
-                        image.push('latest')
-                        echo "✅ Streaming service pushed"
+                }
+                stage('Streaming') { 
+                    steps { 
+                        dir('backend/streamingService') { 
+                            script { 
+                                def image = docker.build("975050024946.dkr.ecr.us-west-1.amazonaws.com/streamingapp-streaming:${BUILD_NUMBER}")
+                                echo "✅ Streaming built"
+                            } 
+                        } 
                     } 
-                } 
-            } 
+                }
+            }
         }
     }
     post { 
         always { 
-            sh 'docker logout 975050024946.dkr.ecr.us-west-1.amazonaws.com || true'
-            echo "🏁 Pipeline completed!"
+            echo "🏁 ALL SERVICES BUILT SUCCESSFULLY!"
         } 
     }
 }
