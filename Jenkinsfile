@@ -1,16 +1,15 @@
 pipeline {
     agent any
     stages {
-        stage('AWS Login') {
+        stage('AWS Login - Direct') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'aws-creds-sudhanshu', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                    sh '''
-                    export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                    export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                    aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin 975050024946.dkr.ecr.us-west-1.amazonaws.com
-                    echo "✅ Docker login successful"
-                    '''
-                }
+                sh '''
+                aws configure set aws_access_key_id AKIAQMS3O5JPPW6ZBQ6Z
+                aws configure set aws_secret_access_key wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY
+                aws configure set default.region us-west-1
+                aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin 975050024946.dkr.ecr.us-west-1.amazonaws.com
+                echo "✅ Docker login successful"
+                '''
             }
         }
         stage('Frontend') {
